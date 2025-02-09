@@ -21,11 +21,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | obj_dir
 $(MODULE): $(SRC_O_LIST) | bin_dir
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
-
-example_$(MODULE): $(SRC_DIR)/wav_parser_example.c | bin_dir
-	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
-
-
 bin_dir:
 	mkdir -p $(BIN_DIR)
 
