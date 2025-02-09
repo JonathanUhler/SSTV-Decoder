@@ -7,7 +7,7 @@ SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
 
-SRC_C_LIST := $(MODULE).c wav_parser.c
+SRC_C_LIST := $(MODULE).c wav_file.c
 SRC_O_LIST := $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRC_C_LIST)))
 
 

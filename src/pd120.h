@@ -11,7 +11,7 @@
 #define CHROMA_MS 
 
 #define IMAGE_WIDTH  640
-#define IMAGE_HEIGHT 496
+#define IMAGE_HEIGHT 480
 
 
 #endif  // _PD120_H_

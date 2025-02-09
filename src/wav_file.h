@@ -1,5 +1,5 @@
-#ifndef _WAV_PARSER_H_
-#define _WAV_PARSER_H_
+#ifndef _WAV_FILE_H_
+#define _WAV_FILE_H_
 
 
 #include <stdint.h>
@@ -60,10 +60,48 @@ struct wav_file_s {
 };
 
 
+/**
+ * Opens a {@code .wav} file.
+ *
+ * @param path  The path to the {@code .wav} file. Relative paths are relative to the CWD.
+ *
+ * @return A pointer to a {@code WavFile} structure describing the data in the file. If the file
+ *         cannot be opened {@code NULL} is returned.
+ */
 WavFile *wav_file_open(const char *path);
+
+
+/**
+ * Pretty-prints the header metadata in the provided structure.
+ *
+ * Information is printed in a human-readable format to the standard output. If the wave file
+ * pointer is {@code NULL}, the string {@code "[NULL]"} is printed.
+ *
+ * @param wav_file  The wave file structure to print.
+ */
 void wav_file_print(const WavFile *wav_file);
+
+
+/**
+ * Dumps the raw audio data from the provided structure.
+ *
+ * Samples are printed for each channel in the order they appear, in hexadecimal. The size of a
+ * sample, the number of channels, and the number of samples are all determined from the header
+ * metadata in the file. A {@code NULL} file pointer will print {@code "[NULL]"}.
+ *
+ * @param wav_file  The wave file structure to print the contained audio data of.
+ */
 void wav_file_print_data(const WavFile *wav_file);
+
+
+/**
+ * Closes a {@code .wav} file opened with {@code wav_file_open}.
+ *
+ * @param wav_file  The wave file to close.
+ *
+ * @see wav_file_open
+ */
 void wav_file_close(WavFile *wav_file);
 
 
-#endif  // _WAV_PARSER_H_
+#endif  // _WAV_FILE_H_

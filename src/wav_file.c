@@ -1,4 +1,4 @@
-#include "wav_parser.h"
+#include "wav_file.h"
 
 
 #include <limits.h>
@@ -89,20 +89,25 @@ void wav_file_print_data(const WavFile *wav_file) {
     }
 
     uint32_t sample_size = header->num_channels * header->bits_per_sample / CHAR_BIT;
+    uint32_t data_size_per_channel = header->data_size / header->num_channels;
     if (sample_size > sizeof(uint32_t)) {
         printf("  [ERROR: Sample size %d B cannot be greater than 4 B]\n", sample_size);
     }
 
-    for (size_t sample = 0; sample < header->data_size; sample += sample_size) {
-        uint32_t sample_data = 0;
+    for (size_t sample = 0; sample < data_size_per_channel; sample += sample_size) {
+        printf("  Sample %8zu:", sample);
+        for (size_t channel = 0; channel < header->num_channels; channel++) {
+            uint32_t sample_data = 0;
 
-        for (size_t byte_in_sample = 0; byte_in_sample < sample_size; byte_in_sample++) {
-            uint32_t byte_data = data[sample + byte_in_sample];
-            byte_data <<= byte_in_sample * CHAR_BIT;
-            sample_data |= byte_data;
+            for (size_t byte_in_sample = 0; byte_in_sample < sample_size; byte_in_sample++) {
+                uint32_t byte_data = data[sample + byte_in_sample];
+                byte_data <<= byte_in_sample * CHAR_BIT;
+                sample_data |= byte_data;
+            }
+
+            printf(" CH%1zu = %0*x", channel, 2 * sample_size, sample_data);
         }
-
-        printf("  Sample %12zu: %0*x\n", sample, 2 * sample_size, sample_data);
+        printf("\n");
     }
 }
 
