@@ -2,6 +2,7 @@
 
 
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,7 +62,93 @@ WavFile *wav_file_open(const char *path) {
 }
 
 
-void wav_file_print(const WavFile *wav_file) {
+WavSamples *wav_file_get_mono_samples(const WavFile *wav_file) {
+    if (wav_file == NULL || wav_file->header == NULL || wav_file->data == NULL) {
+        return NULL;
+    }
+
+    // We get the information from the wave file for use throughout. This has been checked for
+    // NULL above.
+    WavHeader *header = wav_file->header;
+    uint8_t *data = wav_file->data;
+
+    // We compute some useful values for determining the size of a sample in bytes, the size of
+    // a "row" (the samples in all channels for one time point), and the number of "rows". Because
+    // this function compresses all channels down to one (mono), it contains the same number of
+    // rows, just with only a single sample per row.
+    uint32_t bytes_per_sample = header->bits_per_sample / CHAR_BIT;
+    uint32_t bytes_per_row = bytes_per_sample * header->num_channels;
+    uint32_t num_rows = header->data_size / bytes_per_row;
+
+    double *samples = (double *) malloc(num_rows * sizeof(double));
+
+    // The outer loop goes through each row (the samples in all channels for a time point in the
+    // original audio, and a single sample for a single time point in the `samples` list).
+    for (size_t row = 0; row < num_rows; row++) {
+        double channel_aggregate = 0.0;  // We will take the average to make it mono later.
+
+        // The channel loop goes through each channel for the current row/time point.
+        for (size_t channel = 0; channel < header->num_channels; channel++) {
+            uint32_t raw_sample = 0;
+
+            // Finally, the inner most loop constructs the sample for the current channel, which
+            // might occupy multiple bytes.
+            for (size_t byte_in_sample = 0; byte_in_sample < bytes_per_sample; byte_in_sample++) {
+                size_t index = row * bytes_per_row + channel * bytes_per_sample + byte_in_sample;
+                uint32_t byte_data = data[index];
+                byte_data <<= byte_in_sample * CHAR_BIT;
+                raw_sample |= byte_data;
+            }
+
+            channel_aggregate += wav_file_normalize_sample(raw_sample, header->bits_per_sample);
+        }
+
+        // Take the average of all channels to get a single mono sample for this time point.
+        double channel_average = channel_aggregate / header->num_channels;
+        samples[row] = channel_average;
+    }
+
+    // With the samples determined and normalized, we can place them into a nice structure.
+    WavSamples *wav_samples = (WavSamples *) malloc(sizeof(WavSamples));
+    wav_samples->num_samples = num_rows;
+    wav_samples->sample_rate = header->sample_rate;
+    wav_samples->samples = samples;
+    return wav_samples;
+}
+
+
+double wav_file_normalize_sample(uint32_t raw_sample, uint32_t bits_per_sample) {
+    // We will use two masks to interpret the bits of the raw sample as a signed integer and
+    // sign-extend to an INT32 if needed. The `value_mask` masks the bits of the raw sample
+    // (assuming it has `bits_per_sample` bits). Thus, the bitwise inverse of this will be used
+    // to sign extend. The `sign_mask` is just for the sign bit.
+    uint32_t value_mask = (1U << bits_per_sample) - 1;
+    uint32_t sign_mask = 1U << (bits_per_sample - 1);
+    raw_sample &= value_mask;
+
+    // If the sign bit in the raw sample's bits is set, then we sign extend to an INT32.
+    if (raw_sample & sign_mask) {
+        raw_sample |= ~value_mask;
+    }
+
+    // After sign extension, we can interpret the value as an INT32. Finally, we can normalize
+    // it from the range of an integer with `bits_per_sample` bits to a float on [-1, 1].
+    int32_t signed_raw_sample = (int32_t) raw_sample;
+    return (double) signed_raw_sample / pow(2.0, bits_per_sample - 1);
+}
+
+
+void wav_file_free_samples(WavSamples *wav_samples) {
+    if (wav_samples == NULL) {
+        return;
+    }
+
+    free(wav_samples->samples);
+    free(wav_samples);
+}
+
+
+void wav_file_print_header(const WavFile *wav_file) {
     // Top-level message declaring this is a wave file structure.
     printf("WavFile:\n");
     if (wav_file == NULL) {
@@ -92,54 +179,6 @@ void wav_file_print(const WavFile *wav_file) {
     printf("  Bits/sample: %d b\n",  header->bits_per_sample);
     printf("  data marker: %.4s\n",  header->data_marker);
     printf("  Data size:   %d B\n",  header->data_size);
-}
-
-
-void wav_file_print_data(const WavFile *wav_file) {
-    // Top-level message declaring this is a wave file structure.
-    printf("WavFile:\n");
-    if (wav_file == NULL) {
-        printf("[NULL]\n");
-        return;
-    }
-
-    // Top-level message for the list of raw audio samples.
-    printf(" Samples:\n");
-    WavHeader *header = wav_file->header;
-    uint8_t *data = wav_file->data;
-    if (data == NULL) {
-        printf("  [NULL]\n");
-        return;
-    }
-
-    // We assume a maximum fidelity of 32-bits per sample (`uint32_t`). If this is violated
-    // by the sample size in the header, we cannot print the samples.
-    uint32_t sample_size = header->num_channels * header->bits_per_sample / CHAR_BIT;
-    uint32_t data_size_per_channel = header->data_size / header->num_channels;
-    if (sample_size > sizeof(uint32_t)) {
-        printf("  [ERROR: Sample size %d B cannot be greater than 4 B]\n", sample_size);
-        return;
-    }
-
-    // For each sample, we loop through each channel (i.e. mono or stereo) and print the hex
-    // information for that sample/channel. For audio data where a sample occupies more than one
-    // byte, we must construct the multi-byte sample
-    for (size_t sample = 0; sample < data_size_per_channel; sample += sample_size) {
-        printf("  Sample %8zu:", sample);
-        for (size_t channel = 0; channel < header->num_channels; channel++) {
-            uint32_t sample_data = 0;
-
-            // Construct the multi-byte sample
-            for (size_t byte_in_sample = 0; byte_in_sample < sample_size; byte_in_sample++) {
-                uint32_t byte_data = data[sample + byte_in_sample];
-                byte_data <<= byte_in_sample * CHAR_BIT;
-                sample_data |= byte_data;
-            }
-
-            printf(" CH%1zu = %0*x", channel, 2 * sample_size, sample_data);
-        }
-        printf("\n");
-    }
 }
 
 

@@ -1,0 +1,8 @@
+#ifndef _SSTV_PROCESSING_H_
+#define _SSTV_PROCESSING_H_
+
+
+void SSTV_PROCESSING_FILE_PLACEHOLDER(void);
+
+
+#endif  // _SSTV_PROCESSING_H_

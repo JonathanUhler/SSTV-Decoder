@@ -3,10 +3,12 @@
 
 
 #include <stdint.h>
+#include <stdlib.h>
 
 
 typedef struct wav_header_s WavHeader;
 typedef struct wav_file_s WavFile;
+typedef struct wav_samples_s WavSamples;
 
 
 /**
@@ -61,6 +63,19 @@ struct wav_file_s {
 
 
 /**
+ * A structure describing a WAV file with sample data normalized to the range [-1.0, 1.0].
+ *
+ * @var header  A pointer to a {@code WavHeader} structure with the header data.
+ * @var data    A pointer to the normalized audio data (with {@code header->data_size} entries).
+ */
+struct wav_samples_s {
+    size_t num_samples;
+    uint32_t sample_rate;
+    double *samples;
+};
+
+
+/**
  * Opens a {@code .wav} file.
  *
  * @param path  The path to the {@code .wav} file. Relative paths are relative to the CWD.
@@ -72,6 +87,39 @@ WavFile *wav_file_open(const char *path);
 
 
 /**
+ * Creates a list of audio samples from a wave file normalized on {@code [-1, 1]}.
+ *
+ * The sample data is always mono. If the original wave file contains more than one channel, the
+ * normalized sample is the average of all channels in the wave file.
+ *
+ * @param wav_file  The wave file to get the normalized samples from.
+ *
+ * @return A pointer to a {@code WavSamples} structure with the list of samples, number of samples,
+ *         and sample rate in Hertz.
+ */
+WavSamples *wav_file_get_mono_samples(const WavFile *wav_file);
+
+
+/**
+ * Normalizes a single sample in a wave file.
+ *
+ * @param raw_sample       The bits of the raw sample, which will be interpreted as signed.
+ * @param bits_per_sample  The number of bits in the raw sample.
+ *
+ * @return The normalized value of the raw sample.
+ */
+double wav_file_normalize_sample(uint32_t raw_sample, uint32_t bits_per_sample);
+
+
+/**
+ * Frees a {@code WavSamples} structure returned by {@code wav_file_get_*_samples}.
+ *
+ * @param wav_samples  The {@code WavSamples} structure to free.
+ */
+void wav_file_free_samples(WavSamples *wav_samples);
+
+
+/**
  * Pretty-prints the header metadata in the provided structure.
  *
  * Information is printed in a human-readable format to the standard output. If the wave file
@@ -79,19 +127,7 @@ WavFile *wav_file_open(const char *path);
  *
  * @param wav_file  The wave file structure to print.
  */
-void wav_file_print(const WavFile *wav_file);
-
-
-/**
- * Dumps the raw audio data from the provided structure.
- *
- * Samples are printed for each channel in the order they appear, in hexadecimal. The size of a
- * sample, the number of channels, and the number of samples are all determined from the header
- * metadata in the file. A {@code NULL} file pointer will print {@code "[NULL]"}.
- *
- * @param wav_file  The wave file structure to print the contained audio data of.
- */
-void wav_file_print_data(const WavFile *wav_file);
+void wav_file_print_header(const WavFile *wav_file);
 
 
 /**
