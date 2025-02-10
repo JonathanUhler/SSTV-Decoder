@@ -2,6 +2,8 @@
 #include "modes.h"
 #include "sstv_processing.h"
 #include "wav_file.h"
+#include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -86,17 +88,67 @@ size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode) {
 }
 
 
-/*
 uint8_t decode_vis_code(const WavSamples *wav_samples, const SstvMode *mode, size_t vis_start) {
-    return 0;
+    // Extract information to be used throughout this function.
+    uint32_t sample_rate = wav_samples->sample_rate;
+    double *samples = wav_samples->samples;
+
+    size_t bit_size = round(mode->bit_time_sec * sample_rate);
+    uint8_t vis_p_code = 0;  // The VIS code with parity bit that we will build bit-by-bit
+
+    // For the number of bits in the VIS+P code, we loop through and figure out what sample
+    // that bit contains. We then determine the sample area for that bit and find the peak
+    // frequency. The frequency determines whether the bit is logical HI or LO, which we add
+    // to `vis_p_code` (LSB is read first; lowest sample number).
+    for (size_t i = 0; i < CHAR_BIT; i++) {
+        size_t bit_sample = vis_start + i * bit_size;
+        double *bit_area = &samples[bit_sample];
+        double peak = peak_frequency(bit_area, bit_size, sample_rate);
+
+        uint8_t bit_value = peak <= mode->sync_hz;
+        bit_value <<= i;
+        vis_p_code |= bit_value;
+    }
+
+    // Check that the parity is correct for sanity.
+    bool has_correct_parity = __builtin_parity(vis_p_code) == 0;
+    assert(has_correct_parity && "Incorrect parity!");
+
+    // Remove the parity bit (MSB) after it has been checked and return the VIS code.
+    uint8_t vis_code = vis_p_code & 0x7F;
+    return vis_code;
 }
 
 
-size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t current_sample) {
-    return 0;
+size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t align_start) {
+    // Extract information to be used throughout.
+    size_t num_samples = wav_samples->num_samples;
+    uint32_t sample_rate = wav_samples->sample_rate;
+    double *samples = wav_samples->samples;
+
+    // Define a size for the sync window, with some margin-of-error factor from the sync time.
+    // Then, determine when the sync alignment stop should be.
+    size_t sync_window = round(mode->sync_time_sec * 1.4 * sample_rate);
+    size_t align_stop = num_samples - sync_window;
+    if (align_stop <= align_start) {
+        return SSTV_PROCESSING_NOT_FOUND;
+    }
+
+    // Search for end of the sync signal.
+    size_t current_sample;
+    for (current_sample = align_start; current_sample < align_stop; current_sample++) {
+        double *sync_window_area = &samples[current_sample];
+        if (!is_frequency(sync_window_area, sync_window, sample_rate, mode->sync_hz)) {
+            break;
+        }
+    }
+
+    // Return the first sample that is not in the sync signal.
+    return current_sample + (sync_window / 2);
 }
 
 
+/*
 uint8_t decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, size_t image_start) {
     return 0;
 }

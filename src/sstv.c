@@ -2,6 +2,7 @@
 #include "freq_processing.h"
 #include "sstv_processing.h"
 #include "modes.h"
+#include <math.h>
 #include <stdio.h>
 
 
@@ -45,6 +46,12 @@ int main(void) {
     const SstvMode *pd120_mode = get_sstv_mode(95);
     size_t header_sample = find_header_sample(wav_samples, pd120_mode);
     printf("Calibration header starts at sample %lu\n", header_sample);
+
+    uint8_t vis_code = decode_vis_code(wav_samples, pd120_mode, header_sample);
+    printf("VIS code is %u in decimal\n", vis_code);
+
+    size_t first_sync_end = find_sync_end(wav_samples, pd120_mode, header_sample + round(pd120_mode->bit_time_sec * 9 * wav_samples->sample_rate));
+    printf("Start of audio is at %lu\n", first_sync_end);
 
     // Demo: cleaning up
     wav_file_free_samples(wav_samples);
