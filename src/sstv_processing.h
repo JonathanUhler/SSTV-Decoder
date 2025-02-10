@@ -19,12 +19,11 @@
  * window that slides 2ms for each check.
  *
  * @param wav_samples  The samples to search for an SSTV calibration header.
- * @param mode         The SSTV mode encoded in the samples.
  *
  * @return The number of the first sample in {@code wav_samples->samples} after the header. If
  *         no header is found, {@code SSTV_PROCESSING_NOT_FOUND} is returned.
  */
-size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode);
+size_t find_vis_start(const WavSamples *wav_samples);
 
 
 /**
@@ -34,12 +33,11 @@ size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode);
  * does not contain the parity bit.
  *
  * @param wav_samples  The samples to search for the VIS code in.
- * @param mode         The SSTV mode encoded in the samples.
  * @param vis_start    The start of the VIS code portion, returned by {@code find_header_sample}.
  *
  * @return The VIS code decoded from the samples starting at {@code vis_start}.
  */
-uint8_t decode_vis_code(const WavSamples *wav_samples, const SstvMode *mode, size_t vis_start);
+uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start);
 
 
 /**

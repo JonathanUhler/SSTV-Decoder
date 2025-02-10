@@ -6,6 +6,14 @@
 #include <stdlib.h>
 
 
+#define SSTV_LEADER_TIME_SEC 0.300000
+#define SSTV_BREAK_TIME_SEC  0.010000
+#define SSTV_BIT_TIME_SEC    0.030000
+
+#define SSTV_LEADER_HZ 1900
+#define SSTV_BREAK_HZ  1200
+
+
 typedef struct sstv_mode_s SstvMode;
 
 
@@ -28,10 +36,10 @@ typedef enum color_space_e ColorSpace;
  * @var width           The number of pixels in each line transmitted.
  * @var height          The number of lines transmitted (does not include double lines as in PD).
  * @var num_channels    The number of data channels in a line.
+ * @var sync_time_sec   The time for a sync pulse between each line ins econds.
  * @var pixel_time_sec  The time for one channel of one pixel in seconds.
  * @var porch_time_sec  The time for the "porch" signal that comes after the "sync" on each line.
- * @var leader_hz       The frequency of the "leader" blocks in the SSTV header.
- * @var break_hz        The frequency of the "break" block between the two leaders.
+ * @var color_space     The color space of this mode.
  * @var sync_hz         The frequency of the "sync" pulse at the start of each line.
  * @var porch_hz        The frequency of the "porch" signal after each sync pulse.
  * @var pixel_min_hz    The minimum frequency for a channel of a pixel.
@@ -46,16 +54,11 @@ struct sstv_mode_s {
     size_t height;
     uint16_t num_channels;
     // Timing and parsing information
-    double leader_time_sec;
-    double break_time_sec;
-    double bit_time_sec;
     double sync_time_sec;
     double porch_time_sec;
     double pixel_time_sec;
     ColorSpace color_space;
     // Signal frequency information
-    double leader_hz;
-    double break_hz;
     double sync_hz;
     double porch_hz;
     double pixel_min_hz;

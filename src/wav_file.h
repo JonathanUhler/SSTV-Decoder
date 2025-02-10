@@ -108,7 +108,7 @@ WavSamples *wav_file_get_mono_samples(const WavFile *wav_file);
  *
  * @return The normalized value of the raw sample.
  */
-double wav_file_normalize_sample(uint32_t raw_sample, uint32_t bits_per_sample);
+static double wav_file_normalize_sample(uint32_t raw_sample, uint32_t bits_per_sample);
 
 
 /**

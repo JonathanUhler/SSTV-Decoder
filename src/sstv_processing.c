@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 
-size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode) {
+size_t find_vis_start(const WavSamples *wav_samples) {
     // Extract information from `wav_samples` for easier/shorter access names.
     size_t num_samples = wav_samples->num_samples;
     uint32_t sample_rate = wav_samples->sample_rate;
@@ -32,14 +32,14 @@ size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode) {
     // start (in samples) compared to `current_sample` (in the for-loop below) where we expect
     // the block to start. The search width is always `window_size`.
 
-    double header_time_sec = 2 * mode->leader_time_sec + mode->break_time_sec + mode->bit_time_sec;
+    double header_time_sec = 2 * SSTV_LEADER_TIME_SEC + SSTV_BREAK_TIME_SEC + SSTV_BIT_TIME_SEC;
     size_t header_size = round(header_time_sec * sample_rate);
     size_t window_size = round(0.01 * sample_rate);  // 10ms search window for DFT
 
     size_t leader_1_sample = 0;
-    size_t break_sample = round(mode->leader_time_sec * sample_rate);
-    size_t leader_2_sample = round((mode->break_time_sec + mode->leader_time_sec) * sample_rate);
-    double vis_start_time_sec = 2 * mode->leader_time_sec + mode->break_time_sec;
+    size_t break_sample = round(SSTV_LEADER_TIME_SEC * sample_rate);
+    size_t leader_2_sample = round((SSTV_BREAK_TIME_SEC + SSTV_LEADER_TIME_SEC) * sample_rate);
+    double vis_start_time_sec = 2 * SSTV_LEADER_TIME_SEC + SSTV_BREAK_TIME_SEC;
     size_t vis_start_sample = round(vis_start_time_sec * sample_rate);
 
     // With everything defined for the four blocks, we start the search.
@@ -64,19 +64,19 @@ size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode) {
         bool leader_1_found  = is_frequency(leader_1_area,
                                             window_size,
                                             sample_rate,
-                                            mode->leader_hz);
+                                            SSTV_LEADER_HZ);
         bool break_found     = is_frequency(break_area,
                                             window_size,
                                             sample_rate,
-                                            mode->break_hz);
+                                            SSTV_BREAK_HZ);
         bool leader_2_found  = is_frequency(leader_2_area,
                                             window_size,
                                             sample_rate,
-                                            mode->leader_hz);
+                                            SSTV_LEADER_HZ);
         bool vis_start_found = is_frequency(vis_start_area,
                                             window_size,
                                             sample_rate,
-                                            mode->sync_hz);
+                                            SSTV_BREAK_HZ);
 
         if (leader_1_found && break_found && leader_2_found && vis_start_found) {
             return current_sample + header_size;
@@ -88,12 +88,12 @@ size_t find_header_sample(const WavSamples *wav_samples, const SstvMode *mode) {
 }
 
 
-uint8_t decode_vis_code(const WavSamples *wav_samples, const SstvMode *mode, size_t vis_start) {
+uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start) {
     // Extract information to be used throughout this function.
     uint32_t sample_rate = wav_samples->sample_rate;
     double *samples = wav_samples->samples;
 
-    size_t bit_size = round(mode->bit_time_sec * sample_rate);
+    size_t bit_size = round(SSTV_BIT_TIME_SEC * sample_rate);
     uint8_t vis_p_code = 0;  // The VIS code with parity bit that we will build bit-by-bit
 
     // For the number of bits in the VIS+P code, we loop through and figure out what sample
@@ -105,7 +105,7 @@ uint8_t decode_vis_code(const WavSamples *wav_samples, const SstvMode *mode, siz
         double *bit_area = &samples[bit_sample];
         double peak = peak_frequency(bit_area, bit_size, sample_rate);
 
-        uint8_t bit_value = peak <= mode->sync_hz;
+        uint8_t bit_value = peak <= SSTV_BREAK_HZ;
         bit_value <<= i;
         vis_p_code |= bit_value;
     }

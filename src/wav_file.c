@@ -117,7 +117,7 @@ WavSamples *wav_file_get_mono_samples(const WavFile *wav_file) {
 }
 
 
-double wav_file_normalize_sample(uint32_t raw_sample, uint32_t bits_per_sample) {
+static double wav_file_normalize_sample(uint32_t raw_sample, uint32_t bits_per_sample) {
     // We will use two masks to interpret the bits of the raw sample as a signed integer and
     // sign-extend to an INT32 if needed. The `value_mask` masks the bits of the raw sample
     // (assuming it has `bits_per_sample` bits). Thus, the bitwise inverse of this will be used
