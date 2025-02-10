@@ -5,26 +5,29 @@
 #include <stdlib.h>
 
 
-double hann_window(int n, int i) {
-    return 0.5 * (1 - cos(2.0 * M_PI * i / (n - 1)));
+double hann_window(size_t num_samples, size_t sample_index) {
+    return 0.5 * (1 - cos(2.0 * M_PI * sample_index / (num_samples - 1)));
 }
 
 
-double barycentric_peak_interpolation(double *bins, size_t num_bins, size_t x) {
-    double y1 = (x == 0) ? bins[x] : bins[x - 1];
-    double y3 = (x + 1 >= num_bins) ? bins[x] : bins[x + 1];
-    double denominator = y1 + bins[x] + y3;
-    return denominator == 0 ? 0 : (y3 - y1) / denominator + x;
+double barycentric_peak_interpolation(double *bins, size_t num_bins, size_t index) {
+    double left_neighbor = (index == 0) ? bins[index] : bins[index - 1];
+    double right_neighbor = (index + 1 >= num_bins) ? bins[index] : bins[index + 1];
+    double denominator = left_neighbor + bins[index] + right_neighbor;
+    return denominator == 0 ? 0 : (right_neighbor - left_neighbor) / denominator + index;
 }
 
 
 void remove_dc_offset(double *samples, double *cleaned_samples, size_t num_samples) {
+    // We first loop through all the samples and calculate the mean of the window.
     double mean = 0.0;
     for (size_t i = 0; i < num_samples; i++) {
         mean += samples[i];
     }
     mean /= num_samples;
 
+    // With the mean, we then subtract that from all the samples. This eliminates the DC offset
+    // that may exist in the sample data, which will cause `peak_frequency` to return 0 Hz.
     for (size_t i = 0; i < num_samples; i++) {
         cleaned_samples[i] = samples[i] - mean;
     }
@@ -66,4 +69,11 @@ double peak_frequency(double *samples, size_t num_samples, uint32_t sample_rate)
     fftw_free(fft);
 
     return peak_frequency;
+}
+
+
+bool is_frequency(double *samples, size_t num_samples, uint32_t sample_rate, double frequency) {
+    double peak = peak_frequency(samples, num_samples, sample_rate);
+    double error = fabs(peak - frequency);
+    return error < FREQ_PROCESSING_MARGIN_HZ;
 }
