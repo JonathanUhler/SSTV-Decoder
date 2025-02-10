@@ -45,9 +45,13 @@ struct sstv_mode_s {
     size_t width;
     size_t height;
     uint16_t num_channels;
-    // Timing information
-    double pixel_time_sec;
+    // Timing and parsing information
+    double leader_time_sec;
+    double break_time_sec;
+    double bit_time_sec;
+    double sync_time_sec;
     double porch_time_sec;
+    double pixel_time_sec;
     ColorSpace color_space;
     // Signal frequency information
     double leader_hz;

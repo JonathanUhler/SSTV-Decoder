@@ -1,5 +1,6 @@
 #include "wav_file.h"
 #include "freq_processing.h"
+#include "sstv_processing.h"
 #include "modes.h"
 #include <stdio.h>
 
@@ -17,6 +18,7 @@ int main(void) {
         printf("Normalized sample %4lu: %f\n", i, wav_samples->samples[i]);
     }
 
+    /*
     // Demo: some random data for peak frequency, expecting 3802.082584... Hz
     size_t len = 10;
     double *data = (double *) malloc(sizeof(double) * len);
@@ -38,6 +40,11 @@ int main(void) {
     const SstvMode *pd120_mode = get_sstv_mode(95);
     printf("addr of pd120 mode (shouldn't be null) = %lu\n", (size_t) pd120_mode);
     printf("addr of '0' mode (should be null) = %lu\n", (size_t) get_sstv_mode(0));
+    */
+
+    const SstvMode *pd120_mode = get_sstv_mode(95);
+    size_t header_sample = find_header_sample(wav_samples, pd120_mode);
+    printf("Calibration header starts at sample %lu\n", header_sample);
 
     // Demo: cleaning up
     wav_file_free_samples(wav_samples);
