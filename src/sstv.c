@@ -1,5 +1,6 @@
 #include "wav_file.h"
 #include "freq_processing.h"
+#include "modes.h"
 #include <stdio.h>
 
 
@@ -32,6 +33,11 @@ int main(void) {
     double freq = peak_frequency(data, len, wav_file->header->sample_rate);
     printf("peak freq = %f Hz\n", freq);
     free(data);
+
+    // Demo: get an sstv mode
+    const SstvMode *pd120_mode = get_sstv_mode(95);
+    printf("addr of pd120 mode (shouldn't be null) = %lu\n", (size_t) pd120_mode);
+    printf("addr of '0' mode (should be null) = %lu\n", (size_t) get_sstv_mode(0));
 
     // Demo: cleaning up
     wav_file_free_samples(wav_samples);
