@@ -8,13 +8,40 @@
 extern bool logger_verbose;
 
 
-void logger_print(const char *severity, const char *message);
 void logger_set_verbosity(bool verbose);
-void log_info(const char *message);
-void log_debug(const char *message);
-void log_warn(const char *message);
-void log_error(const char *message);
-void log_fatal(const char *message);
+
+
+#define LOG_PRINT_HELPER(severity, format, ...)                 \
+    printf("%-5s  " format "\n%s", severity, __VA_ARGS__)
+
+#define LOG_PRINT(severity, ...)                \
+    LOG_PRINT_HELPER(severity, __VA_ARGS__, "")
+
+#define log_debug(...)                          \
+    if (logger_verbose) {                       \
+        LOG_PRINT("DEBUG", __VA_ARGS__);        \
+    }
+
+#define log_info(...)                           \
+    {                                           \
+        LOG_PRINT("INFO", __VA_ARGS__);         \
+    }
+
+#define log_warn(...)                           \
+    {                                           \
+        LOG_PRINT("WARN", __VA_ARGS__);         \
+    }
+
+#define log_error(...)                           \
+    {                                            \
+        LOG_PRINT("ERROR", __VA_ARGS__);         \
+    }
+
+#define log_fatal(...)                          \
+    {                                           \
+        LOG_PRINT("FATAL", __VA_ARGS__);        \
+        exit(1);                                \
+    }
 
 
 #endif  // _LOGGER_H_

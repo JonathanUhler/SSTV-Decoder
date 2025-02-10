@@ -11,7 +11,7 @@
 
 void usage(const char *error) {
     if (error != NULL) {
-        log_error(error);
+        printf("error: %s\n", error);
     }
 
     printf("usage: sstv [-o path] [-v] path\n");
@@ -30,7 +30,7 @@ void usage(const char *error) {
 void sstv_decode_and_save(const char *input_path, const char *output_path) {
     WavFile *wav_file = wav_file_open(input_path);
     if (wav_file == NULL) {
-        log_fatal("cannot open wave audio file");
+        log_fatal("cannot open wave audio file '%s'", input_path);
     }
     if (logger_verbose) {
         log_debug("successfully opened wave audio file, header follow");
@@ -39,17 +39,17 @@ void sstv_decode_and_save(const char *input_path, const char *output_path) {
 
     WavSamples *wav_samples = wav_file_get_mono_samples(wav_file);
     if (wav_samples == NULL) {
-        log_fatal("cannot extract mono samples from wave audio file");
+        log_fatal("cannot extract mono samples from wave audio file '%s'", input_path);
     }
 
     size_t vis_start = find_vis_start(wav_samples);
     uint8_t vis_code = decode_vis_code(wav_samples, vis_start);
     const SstvMode *sstv_mode = get_sstv_mode(vis_code);
     if (sstv_mode == NULL) {
-        log_fatal("sstv mode is not supported");
+        log_fatal("sstv mode with VIS code %d is not supported", vis_code);
     }
-    printf("%lu, %u\n", vis_start, vis_code);
 
+    log_debug("found VIS at sample %lu, mode is '%s' (%u)\n", vis_start, sstv_mode->name, vis_code);
     printf("%s\n", output_path);
 
     wav_file_free_samples(wav_samples);
