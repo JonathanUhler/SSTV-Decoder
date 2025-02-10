@@ -3,6 +3,7 @@
 
 
 #include <stdbool.h>
+#include <stdio.h>
 
 
 extern bool logger_verbose;

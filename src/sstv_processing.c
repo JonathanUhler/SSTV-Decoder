@@ -1,4 +1,5 @@
 #include "freq_processing.h"
+#include "logger.h"
 #include "modes.h"
 #include "sstv_processing.h"
 #include "wav_file.h"
@@ -54,6 +55,11 @@ size_t find_vis_start(const WavSamples *wav_samples) {
          current_sample < num_samples - header_size;
          current_sample += jump_size)
     {
+        if (current_sample % sample_rate == 0) {
+            double current_time = (double) current_sample / (double) sample_rate;
+            log_info("searching for SSTV header at time %5.1fs", current_time);
+        }
+
         double *search_area = &samples[current_sample];
 
         double *leader_1_area  = &search_area[leader_1_sample];
@@ -79,11 +85,13 @@ size_t find_vis_start(const WavSamples *wav_samples) {
                                             SSTV_BREAK_HZ);
 
         if (leader_1_found && break_found && leader_2_found && vis_start_found) {
+            log_info("found SSTV header!");
             return current_sample + header_size;
         }
     }
 
     // If nothing was found, we return a sentinel value.
+    log_warn("did not find SSTV header");
     return SSTV_PROCESSING_NOT_FOUND;
 }
 
@@ -112,6 +120,7 @@ uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start) {
 
     // Check that the parity is correct for sanity.
     bool has_correct_parity = __builtin_parity(vis_p_code) == 0;
+    log_debug("VIS+P code is %d", vis_p_code);
     assert(has_correct_parity && "Incorrect parity!");
 
     // Remove the parity bit (MSB) after it has been checked and return the VIS code.
