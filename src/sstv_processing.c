@@ -214,6 +214,8 @@ uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, 
                 image_data[pixel_index] = calculate_pixel_value(frequency, mode);
             }
         }
+
+        line_start += round(line_time_sec * sample_rate);
     }
 
     return image_data;
