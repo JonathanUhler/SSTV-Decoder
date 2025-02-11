@@ -64,6 +64,9 @@ void png_file_save(const Pixel *pixels, size_t width, size_t height, const char 
 Pixel *png_file_y1crcby2_to_rgb(const uint8_t *image_data, const SstvMode *mode) {
     assert(mode->color_space == Y1_CR_CB_Y2 && "Expected Y1CRCBY2 color space");
 
+    // For the Y1CRCBY2 SSTV encoding, each line of raw data corresponds to two lines in the
+    // final image (the CbCr data is shared, and each line has its own luminance value). This
+    // means the `image_height` is twice  the `data_height`.
     size_t width = mode->width;
     size_t data_height = mode->height;
     size_t image_height = 2 * data_height;
@@ -71,6 +74,7 @@ Pixel *png_file_y1crcby2_to_rgb(const uint8_t *image_data, const SstvMode *mode)
 
     Pixel *pixels = (Pixel *) malloc(width * image_height * sizeof(Pixel));
 
+    // For each row in the raw data, we get the four channels (CbCr and both luminance channels).
     for (size_t r = 0; r < data_height; r++) {
         size_t line_offset = r * num_channels * width;
         const uint8_t *y1_data = &image_data[line_offset + 0 * width];
@@ -78,6 +82,8 @@ Pixel *png_file_y1crcby2_to_rgb(const uint8_t *image_data, const SstvMode *mode)
         const uint8_t *cb_data = &image_data[line_offset + 2 * width];
         const uint8_t *y2_data = &image_data[line_offset + 3 * width];
 
+        // For each pixel in the image, we get the YCbCr values for both lines. We then convert
+        // to the RGB color space and set the pixels in the same column on consecutive rows.
         for (size_t c = 0; c < width; c++) {
             uint8_t y1_value = y1_data[c];
             uint8_t cr_value = cr_data[c];

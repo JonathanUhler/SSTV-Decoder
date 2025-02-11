@@ -11,6 +11,8 @@
 
 
 size_t find_vis_start(const WavSamples *wav_samples) {
+    assert(wav_samples && "find_vis_start got NULL wav_samples");
+
     // Extract information from `wav_samples` for easier/shorter access names.
     size_t num_samples = wav_samples->num_samples;
     uint32_t sample_rate = wav_samples->sample_rate;
@@ -97,6 +99,8 @@ size_t find_vis_start(const WavSamples *wav_samples) {
 
 
 uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start) {
+    assert(wav_samples && "decode_vis_code got NULL wav_samples");
+
     // Extract information to be used throughout this function.
     uint32_t sample_rate = wav_samples->sample_rate;
     double *samples = wav_samples->samples;
@@ -130,6 +134,9 @@ uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start) {
 
 
 size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t align_start) {
+    assert(wav_samples && "find_sync_end got NULL wav_samples");
+    assert(mode && "find_sync_end got NULL mode");
+
     // Extract information to be used throughout.
     size_t num_samples = wav_samples->num_samples;
     uint32_t sample_rate = wav_samples->sample_rate;
@@ -159,6 +166,9 @@ size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t
 
 uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, size_t image_start)
 {
+    assert(wav_samples && "decode_image_data got NULL wav_samples");
+    assert(mode && "decode_image_data got NULL mode");
+
     // Extract information from the arguments into smaller symbol names for easy use.
     size_t num_samples = wav_samples->num_samples;
     uint32_t sample_rate = wav_samples->sample_rate;
@@ -171,6 +181,7 @@ uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, 
     // We use calloc here so that we can return a zero'ed out list if we don't get all the image
     // data. Any missing data will be black in the final image.
     uint8_t *image_data = (uint8_t *) calloc(width * height * num_channels, sizeof(uint8_t));
+    assert(image_data && "decode_image_data could not calloc image_data");
 
     // Calculate some information about the number of samples per pixel to check with the DFT.
     // Also, calculate some time information from the mode description.
@@ -223,6 +234,8 @@ uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, 
 
 
 static uint8_t calculate_pixel_value(double frequency, const SstvMode *mode) {
+    assert(mode && "calculate_pixel_value got NULL mode");
+
     double pixel_range_hz = mode->pixel_max_hz - mode->pixel_min_hz;
     double pixel_value = (frequency - mode->pixel_min_hz) / pixel_range_hz * 256.0;
     pixel_value = fmin(fmax(pixel_value, 0.0), 255.0);

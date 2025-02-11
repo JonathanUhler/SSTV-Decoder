@@ -9,6 +9,11 @@
 extern bool logger_verbose;
 
 
+/**
+ * Enable or disable DEBUG level logging.
+ *
+ * @param verbose  Whether to enable DEBUG logging.
+ */
 void logger_set_verbosity(bool verbose);
 
 

@@ -3,6 +3,7 @@
 #include "png_file.h"
 #include "sstv_processing.h"
 #include "wav_file.h"
+#include <fftw3.h>
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -63,6 +64,7 @@ void sstv_decode_and_save(const char *input_path, const char *output_path) {
 
     free(pixels);
     free(image_data);
+    fftw_cleanup();
     wav_file_free_samples(wav_samples);
     wav_file_close(wav_file);
 }

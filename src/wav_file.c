@@ -1,6 +1,7 @@
 #include "wav_file.h"
 
 
+#include <assert.h>
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
@@ -39,11 +40,13 @@ WavFile *wav_file_open(const char *path) {
     fread(&header->block_align,     sizeof(header->block_align),     1, file);
     fread(&header->bits_per_sample, sizeof(header->bits_per_sample), 1, file);
 
+    assert(header->fmt_type == 1 && "wave file is not PCM-integer-encoded");
+
     // For the data segment, we must deal with non-canonical riff data. Some files place additional
     // chunks (e.g. "LIST") immediately before the "data" segment. Each chunk will have a 4-byte
     // size following it that we can use to skip the chunk. We do this until we find "data"
     fread(header->data_marker, sizeof(header->data_marker), 1, file);
-    while (strcmp(header->data_marker, "data") != 0) {
+    while (memcmp(header->data_marker, "data", sizeof(header->data_marker)) != 0) {
         uint32_t chunk_size = 0;
         fread(&chunk_size, sizeof(chunk_size), 1, file);
         fseek(file, chunk_size, SEEK_CUR);
@@ -56,6 +59,8 @@ WavFile *wav_file_open(const char *path) {
     uint8_t *data = (uint8_t *) malloc(header->data_size);
     fread(data, sizeof(uint8_t), header->data_size, file);
 
+    fclose(file);
+
     wav_file->header = header;
     wav_file->data = data;
     return wav_file;
@@ -63,9 +68,7 @@ WavFile *wav_file_open(const char *path) {
 
 
 WavSamples *wav_file_get_mono_samples(const WavFile *wav_file) {
-    if (wav_file == NULL || wav_file->header == NULL || wav_file->data == NULL) {
-        return NULL;
-    }
+    assert(wav_file && "wav_file_get_mono_samples got NULL wav_file");
 
     // We get the information from the wave file for use throughout. This has been checked for
     // NULL above.
@@ -81,6 +84,7 @@ WavSamples *wav_file_get_mono_samples(const WavFile *wav_file) {
     uint32_t num_rows = header->data_size / bytes_per_row;
 
     double *samples = (double *) malloc(num_rows * sizeof(double));
+    assert(samples && "wav_file_get_mono_samples could not malloc samples");
 
     // The outer loop goes through each row (the samples in all channels for a time point in the
     // original audio, and a single sample for a single time point in the `samples` list).
@@ -110,6 +114,8 @@ WavSamples *wav_file_get_mono_samples(const WavFile *wav_file) {
 
     // With the samples determined and normalized, we can place them into a nice structure.
     WavSamples *wav_samples = (WavSamples *) malloc(sizeof(WavSamples));
+    assert(wav_samples && "wav_file_mono_samples could not malloc wav_samples");
+
     wav_samples->num_samples = num_rows;
     wav_samples->sample_rate = header->sample_rate;
     wav_samples->samples = samples;

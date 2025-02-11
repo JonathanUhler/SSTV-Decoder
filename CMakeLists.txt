@@ -13,8 +13,8 @@ list(FILTER SRC_FILES EXCLUDE REGEX "${SRC_DIR}/${MODULE}.c")
 include(FetchContent)
 FetchContent_Declare(
     fftw
-    URL http://fftw.org/fftw-3.3.10.tar.gz
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    URL http://fftw.org/fftw-3.3.10.tar.gz
 )
 FetchContent_MakeAvailable(fftw)
 
