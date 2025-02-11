@@ -52,7 +52,33 @@ uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start);
 size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t align_start);
 
 
-uint8_t decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, size_t image_start);
+/**
+ * Decodes pixel data from the list of provided samples.
+ *
+ * The data is returned as a 3-dimensional array with the shape {@code [width, channels, height]}.
+ * Values in the array are converted to luminance on the interval {@code [0, 255]} and ready
+ * to be parsed into/written to an image file.
+ *
+ * @param wav_samples  The samples to search for the VIS code in.
+ * @param mode         The SSTV mode encoded in the samples.
+ * @param image_start  The index of the first sample with image data, possibly including a sync
+ *                     pulse that will be automatically skipped.
+ *
+ * @return The pixel data.
+ */
+uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, size_t image_start);
+
+
+/**
+ * Converts a frequency value in the pixel range for the provided mode to a luminance value.
+ *
+ * @param frequency  The frequency to convert.
+ * @param mode       The SSTV mode being used, which defines the minimu and maximum frequencies
+ *                   for the values of a channel in a pixel.
+ *
+ * @return The value of the channel of the pixel on the interval {@code [0, 255]}.
+ */
+static uint8_t calculate_pixel_value(double frequency, const SstvMode *mode);
 
 
 #endif  // _SSTV_PROCESSING_H_

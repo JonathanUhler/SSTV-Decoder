@@ -157,8 +157,72 @@ size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t
 }
 
 
-/*
-uint8_t decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, size_t image_start) {
-    return 0;
+uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, size_t image_start)
+{
+    // Extract information from the arguments into smaller symbol names for easy use.
+    size_t num_samples = wav_samples->num_samples;
+    uint32_t sample_rate = wav_samples->sample_rate;
+    double *samples = wav_samples->samples;
+
+    size_t width = mode->width;
+    size_t height = mode->height;
+    uint16_t num_channels = mode->num_channels;
+
+    // We use calloc here so that we can return a zero'ed out list if we don't get all the image
+    // data. Any missing data will be black in the final image.
+    uint8_t *image_data = (uint8_t *) calloc(width * height * num_channels, sizeof(uint8_t));
+
+    // Calculate some information about the number of samples per pixel to check with the DFT.
+    // Also, calculate some time information from the mode description.
+    double center_window_time = (mode->pixel_time_sec * mode->window_factor) / 2.0;
+    size_t pixel_size = round(center_window_time * 2.0 * sample_rate);
+
+    double channel_time_sec = mode->pixel_time_sec * width;
+    double line_time_sec = channel_time_sec * num_channels;
+
+    // We loop through the dimensions and depth of the image to get pixel values. The outer loop
+    // goes through each scan row between sync pulses.
+    size_t line_start = image_start;
+    for (size_t line_num = 0; line_num < height; line_num++) {
+        line_start = find_sync_end(wav_samples, mode, line_start);  // Skip sync pulse
+
+        if (line_num % 10 == 0) {
+            log_info("decoding image line %3lu / %lu...", line_num, height);
+        }
+
+        // The middle loop goes through each color channel per line. For some modes, like PD modes,
+        // this contains channels for two lines at ones.
+        for (size_t channel_num = 0; channel_num < num_channels; channel_num++) {
+            // The inner loop goes through each pixel for each channel in a row.
+            for (size_t pixel_num = 0; pixel_num < width; pixel_num++) {
+                // We calculate the location of the pixel in terms of time and then sample number.
+                // The pixel location is set to be the center of a window `pixel_size` samples
+                // wide.
+                double channel_offset_sec = mode->porch_time_sec + channel_time_sec * channel_num;
+                double local_pixel_offset_sec = mode->pixel_time_sec * pixel_num;
+                double pixel_offset_sec = channel_offset_sec + local_pixel_offset_sec;
+                double centered_pixel_offset_sec = pixel_offset_sec - center_window_time;
+                size_t pixel_sample = round(line_start + centered_pixel_offset_sec * sample_rate);
+
+                // Get the pixel data and determine the peak frequency, then convert the frequency
+                // to an integer on [0, 255] and add it to the image data.
+                double *pixel_area = &samples[pixel_sample];
+                double frequency = peak_frequency(pixel_area, pixel_size, sample_rate);
+
+                size_t pixel_index =
+                    line_num * num_channels * width + channel_num * width + pixel_num;
+                image_data[pixel_index] = calculate_pixel_value(frequency, mode);
+            }
+        }
+    }
+
+    return image_data;
 }
-*/
+
+
+static uint8_t calculate_pixel_value(double frequency, const SstvMode *mode) {
+    double pixel_range_hz = mode->pixel_max_hz - mode->pixel_min_hz;
+    double pixel_value = (frequency - mode->pixel_min_hz) / pixel_range_hz * 256.0;
+    pixel_value = fmin(fmax(pixel_value, 0.0), 255.0);
+    return round(pixel_value);
+}

@@ -13,6 +13,7 @@ const SstvMode sstv_modes[] = {
             .sync_time_sec   = 0.020000,
             .porch_time_sec  = 0.002080,
             .pixel_time_sec  = 0.000190,
+            .window_factor   = 5.5,
             .color_space     = Y1_CR_CB_Y2,
             .sync_hz         = 1200,
             .porch_hz        = 1500,

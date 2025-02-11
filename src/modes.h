@@ -39,6 +39,7 @@ typedef enum color_space_e ColorSpace;
  * @var sync_time_sec   The time for a sync pulse between each line ins econds.
  * @var pixel_time_sec  The time for one channel of one pixel in seconds.
  * @var porch_time_sec  The time for the "porch" signal that comes after the "sync" on each line.
+ * @var window_factor   An arbitrary value to set the size of the pixel Fourier transform window.
  * @var color_space     The color space of this mode.
  * @var sync_hz         The frequency of the "sync" pulse at the start of each line.
  * @var porch_hz        The frequency of the "porch" signal after each sync pulse.
@@ -57,6 +58,7 @@ struct sstv_mode_s {
     double sync_time_sec;
     double porch_time_sec;
     double pixel_time_sec;
+    double window_factor;
     ColorSpace color_space;
     // Signal frequency information
     double sync_hz;

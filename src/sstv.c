@@ -2,6 +2,8 @@
 #include "modes.h"
 #include "sstv_processing.h"
 #include "wav_file.h"
+#include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,10 +50,16 @@ void sstv_decode_and_save(const char *input_path, const char *output_path) {
     if (sstv_mode == NULL) {
         log_fatal("sstv mode with VIS code %d is not supported", vis_code);
     }
+    log_debug("found VIS at sample %lu, mode is '%s' (%u)", vis_start, sstv_mode->name, vis_code);
 
-    log_debug("found VIS at sample %lu, mode is '%s' (%u)\n", vis_start, sstv_mode->name, vis_code);
+    size_t sample_rate = wav_samples->sample_rate;
+    size_t image_start = vis_start + round(SSTV_BIT_TIME_SEC * (CHAR_BIT + 1) * sample_rate);
+    uint8_t *image_data = decode_image_data(wav_samples, sstv_mode, image_start);
+
+    
     printf("%s\n", output_path);
 
+    free(image_data);
     wav_file_free_samples(wav_samples);
     wav_file_close(wav_file);
 }
