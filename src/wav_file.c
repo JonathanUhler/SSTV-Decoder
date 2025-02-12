@@ -1,6 +1,5 @@
 #include "wav_file.h"
-
-
+#include "logger.h"
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
@@ -40,7 +39,9 @@ WavFile *wav_file_open(const char *path) {
     fread(&header->block_align,     sizeof(header->block_align),     1, file);
     fread(&header->bits_per_sample, sizeof(header->bits_per_sample), 1, file);
 
-    assert(header->fmt_type == 1 && "wave file is not PCM-integer-encoded");
+    if (header->fmt_type != 1) {
+        log_fatal("wave file is not PCM-integer-encoded (fmt_type is %u)", header->fmt_type);
+    }
 
     // For the data segment, we must deal with non-canonical riff data. Some files place additional
     // chunks (e.g. "LIST") immediately before the "data" segment. Each chunk will have a 4-byte
