@@ -133,6 +133,44 @@ uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start) {
 }
 
 
+size_t find_sync_start(const WavSamples *wav_samples, const SstvMode *mode, size_t align_start) {
+    assert(wav_samples && "find_sync_end got NULL wav_samples");
+    assert(mode && "find_sync_end got NULL mode");
+
+    // Extract information used throughout the function.
+    size_t num_samples = wav_samples->num_samples;
+    uint32_t sample_rate = wav_samples->sample_rate;
+    double *samples = wav_samples->samples;
+
+    // Define the size of the sync pulse and search parameters.
+    size_t sync_size = round(mode->sync_time_sec * sample_rate);
+    size_t window_size = round(mode->sync_time_sec * 0.3 * sample_rate);
+    size_t jump_size = round(0.002 * sample_rate);
+
+    // Loop through all the samples starting at the specified `align_start` sample. Slide the
+    // search window by the 2ms `jump_size` for each iteration.
+    for (size_t current_sample = align_start;
+         current_sample < num_samples - sync_size;
+         current_sample += jump_size)
+    {
+        // Print some debug information about the search progress.
+        if (current_sample % sample_rate == 0) {
+            double current_time = (double) current_sample / (double) sample_rate;
+            log_info("searching for sync pulse at time %5.1fs", current_time);
+        }
+
+        // Check for the sync pulse.
+        double *sync_area = &samples[current_sample];
+        if (is_frequency(sync_area, window_size, sample_rate, mode->sync_hz)) {
+            return current_sample;
+        }
+    }
+
+    // Nothing was found.
+    return SSTV_PROCESSING_NOT_FOUND;
+}
+
+
 size_t find_sync_end(const WavSamples *wav_samples, const SstvMode *mode, size_t align_start) {
     assert(wav_samples && "find_sync_end got NULL wav_samples");
     assert(mode && "find_sync_end got NULL mode");
@@ -195,7 +233,8 @@ uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, 
     // goes through each scan row between sync pulses.
     size_t line_start = image_start;
     for (size_t line_num = 0; line_num < height; line_num++) {
-        line_start = find_sync_end(wav_samples, mode, line_start);  // Skip sync pulse
+        line_start = find_sync_start(wav_samples, mode, line_start);
+        line_start = find_sync_end(wav_samples, mode, line_start);    // Skip sync pulse
 
         if (line_num % 10 == 0) {
             log_info("decoding image line %3lu / %lu...", line_num, height);
@@ -214,6 +253,12 @@ uint8_t *decode_image_data(const WavSamples *wav_samples, const SstvMode *mode, 
                 double pixel_offset_sec = channel_offset_sec + local_pixel_offset_sec;
                 double centered_pixel_offset_sec = pixel_offset_sec - center_window_time;
                 size_t pixel_sample = round(line_start + centered_pixel_offset_sec * sample_rate);
+
+                // Check if we have run out of audio data and need to exit early.
+                if (pixel_sample >= num_samples) {
+                    log_warn("ran out of image data at line %lu, exiting early", line_num);
+                    return image_data;  // The rest is set to 0's by calloc
+                }
 
                 // Get the pixel data and determine the peak frequency, then convert the frequency
                 // to an integer on [0, 255] and add it to the image data.

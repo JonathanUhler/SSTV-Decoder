@@ -41,6 +41,27 @@ uint8_t decode_vis_code(const WavSamples *wav_samples, size_t vis_start);
 
 
 /**
+ * Searches for a sample within a sync pulse.
+ *
+ * The search will begin at the {@code align_start} sample. The DFT to find a sync pulse is run
+ * with a window that is one third the width of the sync pulse itself. The window slides 2ms
+ * for each check.
+ *
+ * This function is not primarily used to align to a sync pulse after each scan line (see
+ * {@code find_sync_end} for that behavior). This function is a substitute to {@code find_vis_start}
+ * for very noisy signals in which a header cannot be recovered. The {@code align_start} sample
+ * and the SSTV mode can be specified to attempt parsing without headers.
+ *
+ * @param wav_samples  The samples to search for a sync pulse.
+ * @param mode         The SSTV mode encoded in the samples.
+ * @param align_start  The sample to start searching from.
+ *
+ * @return The index of a sample in the first sync pulse found.
+ */
+size_t find_sync_start(const WavSamples *wav_samples, const SstvMode *mode, size_t align_start);
+
+
+/**
  * Searches for the end of the current/next sync signal in the provided samples.
  *
  * @param wav_samples  The samples to search for the VIS code in.
