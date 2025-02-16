@@ -18,10 +18,12 @@ void usage(const char *error) {
         printf("error: %s\n", error);
     }
 
-    printf("usage: sstv [-a sample] [-o path] [-v] path\n");
+    printf("usage: sstv [-a sample] [-c code] [-o path] [-v] path\n");
     printf("\n");
     printf("options:\n");
     printf("  -a sample  align the image decoding start by the specified sample count\n");
+    printf("  -c code    force the use of the specified VIS code and begin parsing at the\n");
+    printf("             offset specified with `-a' (or 0 by default)\n");
     printf("  -h         print this message and exit\n");
     printf("  -o path    specify the output path for the image file (default .)\n");
     printf("  -v         print verbose debug messages about program execution\n");
@@ -32,7 +34,11 @@ void usage(const char *error) {
 }
 
 
-void sstv_decode_and_save(const char *input_path, const char *output_path, size_t align_add) {
+void sstv_decode_and_save(const char *input_path,
+                          const char *output_path,
+                          size_t align_add,
+                          int force_vis_code)
+{
     // Open the wave file and extract the samples
     WavFile *wav_file = wav_file_open(input_path);
     if (wav_file == NULL) {
@@ -52,19 +58,17 @@ void sstv_decode_and_save(const char *input_path, const char *output_path, size_
     // Decode the VIS code (or use the forced VIS code) from the audio file
     size_t image_start;
     uint8_t vis_code;
-#ifdef SSTV_FORCE_SKIP_HEADERS
-#ifndef SSTV_FORCE_VIS_CODE
-#error "SSTV_FORCE_SKIP_HEADERS defined without setting SSTV_FORCE_VIS_CODE"
-#endif  // SSTV_FORCE_VIS_CODE
-    vis_code = SSTV_FORCE_VIS_CODE;
-    image_start = align_add;
-    log_debug("using forced VIS code from command line");
-#else  // SSTV_FORCE_SKIP_HEADERS
-    size_t vis_start = find_vis_start(wav_samples);
-    vis_code = decode_vis_code(wav_samples, vis_start);
-    image_start = align_add + vis_start + round(SSTV_BIT_TIME_SEC * (CHAR_BIT + 1) * sample_rate);
-    log_debug("found VIS in audio file at sample %lu", vis_start);
-#endif  // SSTV_FORCE_SKIP_HEADERS
+    if (force_vis_code >= 0) {
+        vis_code = (uint8_t) force_vis_code;
+        image_start = align_add;
+        log_debug("using forced VIS code from command line");
+    }
+    else {
+        size_t vis_start = find_vis_start(wav_samples);
+        vis_code = decode_vis_code(wav_samples, vis_start);
+        image_start = align_add + vis_start + round(SSTV_BIT_TIME_SEC * (CHAR_BIT+1) * sample_rate);
+        log_debug("found VIS in audio file at sample %lu", vis_start);
+    }
 
     // From the VIS code, get the SSTV mode
     const SstvMode *sstv_mode = get_sstv_mode(vis_code);
@@ -91,12 +95,16 @@ int main(int argc, char **argv) {
     char *output_path = "./result.png";
     char *input_path = NULL;
     size_t align_add = 0;
+    int force_vis_code = -1;
 
     int flag;
-    while ((flag = getopt(argc, argv, "a:ho:v")) != -1) {
+    while ((flag = getopt(argc, argv, "a:c:ho:v")) != -1) {
         switch (flag) {
         case 'a':
             align_add = atoi(optarg);
+            break;
+        case 'c':
+            force_vis_code = atoi(optarg);
             break;
         case 'h':
             usage(NULL);
@@ -118,7 +126,7 @@ int main(int argc, char **argv) {
     }
     input_path = argv[optind];
 
-    sstv_decode_and_save(input_path, output_path, align_add);
+    sstv_decode_and_save(input_path, output_path, align_add, force_vis_code);
 
     return 0;
 }
