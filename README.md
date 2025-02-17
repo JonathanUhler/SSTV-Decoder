@@ -8,8 +8,14 @@ encodings, SSTV protocols, and the C language. It may or may not be feature comp
 # About SSTV
 This project mainly uses the following resources as a reference for learning about SSTV:
 
-* [[1](http://www.barberdsp.com/downloads/Dayton%20Paper.pdf)] Proposal for SSTV Mode Specifications
+* [[1](http://www.barberdsp.com/downloads/Dayton%20Paper.pdf)] Proposal for SSTV Modes
 * [[2](http://www.sstv-handbook.com/download/sstv-handbook.pdf)] Image Communication on Short Waves
+
+
+# TODO/Wishlist
+* Add support for more SSTV modes
+* Add some digital signal processing to align consecutive scanlines in the image
+* Add some DSP to clean up the image signal (digital bandpass filter, color correction, etc.)
 
 
 # Usage
